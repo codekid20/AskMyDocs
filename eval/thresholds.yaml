@@ -1,0 +1,7 @@
+# Quality floors for CI. Set just below current measured values so the gate
+# catches real regressions without failing on small-sample noise.
+# Current (hybrid+rerank, 10q): Recall@5=0.80, MRR=0.617
+retriever: rerank
+recall_at_k: 0.70
+mrr: 0.55
+k: 5
