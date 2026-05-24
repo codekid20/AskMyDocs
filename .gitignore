@@ -17,6 +17,6 @@ wheels/
 .pytest_cache/
 .ruff_cache/
 
-# Data + vector store (don't commit copyrighted PDFs or large binary indexes)
 data/raw/
-data/processed/
+data/processed/*
+!data/processed/chunks.jsonl
