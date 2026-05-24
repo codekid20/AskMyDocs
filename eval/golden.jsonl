@@ -1,7 +1,7 @@
 {"id": "q1", "question": "What is a bi-encoder?", "relevant": [{"doc_id": "RAG", "heading_contains": "Retriever: DPR"}, {"doc_id": "Sentence-BERT", "heading_contains": "Model"}]}
 {"id": "q2", "question": "How does multi-head attention work?", "relevant": [{"doc_id": "Attention All You Need", "heading_contains": "Multi-Head Attention"}]}
 {"id": "q3", "question": "What is the lost in the middle problem?", "relevant": [{"doc_id": "Lost In the Middle", "heading_contains": "Introduction"}, {"doc_id": "Lost In the Middle", "heading_contains": "Abstract"}]}
-{"id": "q4", "question": "What is the masked language model pre-training objective?", "relevant": [{"doc_id": "Bert Pre Training", "heading_contains": "Pre-training BERT"}]}
+{"id": "q4", "question": "What is the masked language model pre-training objective?", "relevant": [{"doc_id": "Bert Pre Training", "heading_contains": "Pre-training BERT"}, {"doc_id": "Bert Pre Training", "heading_contains": "Introduction"}]}
 {"id": "q5", "question": "How are sentence embeddings computed in Sentence-BERT?", "relevant": [{"doc_id": "Sentence-BERT", "heading_contains": "Model"}, {"doc_id": "Sentence-BERT", "heading_contains": "Introduction"}]}
 {"id": "q6", "question": "What is positional encoding in the Transformer?", "relevant": [{"doc_id": "Attention All You Need", "heading_contains": "Positional Encoding"}]}
 {"id": "q7", "question": "What are the two RAG model formulations?", "relevant": [{"doc_id": "RAG", "heading_contains": "Models"}]}

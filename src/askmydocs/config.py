@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     top_k: int = 5
     retrieve_n_before_rerank: int = 20
 
+    dense_weight: float = 2.0  # fusion: trust dense more than BM25 by default
+    bm25_weight: float = 1.0
+
     # --- Secrets (pulled from .env via pydantic-settings) ---
     groq_api_key: str = Field(default="")
 

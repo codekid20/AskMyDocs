@@ -81,12 +81,14 @@ def hybrid_search(query: str, k: int | None = None) -> list[Chunk]:
     dense_hits = [c for c, _ in dense_search(query, k=fetch)]
     bm25_hits = bm25_search(query, k=fetch)
 
-    # RRF: accumulate 1/(K + rank) per chunk across both ranked lists.
+    # Weighted RRF: each retriever's contribution is scaled by its weight, so
+    # we can trust dense more than BM25 (BM25 adds exact-term wins like q1 but
+    # injects common-term noise like q8 if given equal say).
     fused: dict[str, float] = {}
     by_id: dict[str, Chunk] = {}
-    for hits in (dense_hits, bm25_hits):
+    for hits, weight in ((dense_hits, settings.dense_weight), (bm25_hits, settings.bm25_weight)):
         for rank, c in enumerate(hits, start=1):
-            fused[c.chunk_id] = fused.get(c.chunk_id, 0.0) + 1.0 / (_RRF_K + rank)
+            fused[c.chunk_id] = fused.get(c.chunk_id, 0.0) + weight / (_RRF_K + rank)
             by_id[c.chunk_id] = c
 
     ranked_ids = sorted(fused, key=lambda cid: fused[cid], reverse=True)

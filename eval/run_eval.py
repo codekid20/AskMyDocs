@@ -18,10 +18,13 @@ from eval.metrics import mrr, recall_at_k  # noqa: E402
 from askmydocs.embed import search as dense_search        # noqa: E402
 from askmydocs.retrieval import hybrid_search              # noqa: E402
 from eval.metrics import mrr, recall_at_k                  # noqa: E402
+from askmydocs.rerank import pipeline_search             # noqa: E402
+
 
 RETRIEVERS = {
     "dense": lambda q, k: [c for c, _ in dense_search(q, k=k)],
     "hybrid": lambda q, k: hybrid_search(q, k=k),
+    "rerank": lambda q, k: pipeline_search(q, k=k),
 }
 
 GOLDEN = Path(__file__).resolve().parent / "golden.jsonl"
