@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     groq_model_fast: str = "llama-3.1-8b-instant"
 
     # --- Chunking ---
-    chunk_size: int = 800       # characters; we'll revisit when we see the text
+    chunk_size: int = 800  # characters; we'll revisit when we see the text
+    min_chunk_chars: int = 50  # drop fragments too small to carry meaning
     chunk_overlap: int = 120
 
     # --- Retrieval ---
