@@ -37,7 +37,15 @@ _HEADING_LINE = re.compile(r"^#{1,6}\s+(.*)$")             # markdown headings "
 _MD_EMPHASIS = re.compile(r"[*_]{1,3}")                     # stray markdown * and _ around math
 _DEHYPHENATE = re.compile(r"(\w)-\n(\w)")                   # "knowl-\nedge" -> "knowledge"
 _MULTISPACE = re.compile(r"[ \t]{2,}")
+# Boilerplate sections that are never useful answers — dropped at extraction.
+_SKIP_HEADINGS = {
+    "references", "acknowledgments", "acknowledgements",
+    "broader impact",
+}
 
+
+def _is_boilerplate(heading: str) -> bool:
+    return heading.strip().lower() in _SKIP_HEADINGS
 
 def _normalize(text: str) -> str:
     """Undo the PDF extraction artifacts we identified in the probe."""
@@ -84,7 +92,7 @@ def extract_sections(pdf_path: Path) -> list[Section]:
     def flush(page: int):
         nonlocal cur_lines, cur_heading
         body = _normalize("\n".join(cur_lines))
-        if body:  # skip empty sections (e.g. a heading with no body yet)
+        if body and not _is_boilerplate(cur_heading):
             sections.append(Section(doc_id=doc_id, heading=cur_heading,
                                     text=body, page=page))
         cur_lines = []
