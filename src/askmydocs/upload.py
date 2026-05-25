@@ -25,16 +25,17 @@ def _splitter() -> RecursiveCharacterTextSplitter:
     )
 
 
-def ingest_pdf(pdf_path: Path, collection: str) -> int:
-    """Extract -> chunk -> embed a single PDF into `collection`. Returns the
-    number of chunks indexed. Safe to call repeatedly for the same session to
-    add more documents."""
+def ingest_pdf(pdf_path: Path, collection: str, doc_name: str | None = None) -> int:
+    """Extract -> chunk -> embed a single PDF into `collection`. `doc_name`
+    overrides the doc_id used in citations (so temp-file names don't leak)."""
     sections = extract_sections(pdf_path)
     splitter = _splitter()
 
+    doc_id = doc_name or pdf_path.stem  # prefer the real upload name
+
     chunks: list[Chunk] = []
     for s in sections:
-        ref = SourceRef(doc_id=s.doc_id, heading=s.heading, page=s.page)
+        ref = SourceRef(doc_id=doc_id, heading=s.heading, page=s.page)
         for piece in splitter.split_text(s.text):
             piece = piece.strip()
             if len(piece) < settings.min_chunk_chars:
@@ -42,6 +43,6 @@ def ingest_pdf(pdf_path: Path, collection: str) -> int:
             chunks.append(Chunk(text=piece, source=ref))
 
     n = index_chunks(chunks, collection=collection)
-    invalidate_bm25(collection)  # force BM25 rebuild to include the new chunks
-    logger.success("Ingested {} ({} chunks) into '{}'", pdf_path.name, n, collection)
+    invalidate_bm25(collection)
+    logger.success("Ingested {} ({} chunks) into '{}'", doc_id, n, collection)
     return n

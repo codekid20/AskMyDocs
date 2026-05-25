@@ -81,7 +81,7 @@ async def upload(session_id: str = Form(...), file: UploadFile = File(...)) -> d
         tmp.write(await file.read())
         tmp_path = Path(tmp.name)
     try:
-        n = ingest_pdf(tmp_path, _collection(session_id))
+        n = ingest_pdf(tmp_path, _collection(session_id), doc_name=Path(file.filename).stem)
     finally:
         tmp_path.unlink(missing_ok=True)
 

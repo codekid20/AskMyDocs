@@ -1,23 +1,29 @@
-# Ask My Docs — RAG over Technical Papers
+# Ask My Docs — RAG over Your PDFs
 
 A domain-specific retrieval-augmented generation system that answers questions
-over a corpus of foundational NLP/RAG papers, with **citations grounded in real
-source sections**, **hybrid retrieval + cross-encoder reranking**, and an
-**eval-gated CI pipeline** that fails the build if retrieval quality regresses.
+over PDFs, with **citations grounded in real source sections**, **hybrid
+retrieval + cross-encoder reranking**, an **eval-gated CI pipeline** that fails
+the build if retrieval quality regresses, and a **full-stack web app** where you
+upload your own documents and chat with them.
 
 > Built from scratch as a study in RAG fundamentals — every component is added
 > only after measuring that it beats a simpler baseline on a held-out eval set.
 
+![Ask My Docs UI](docs/img/app-screenshot.png)
+
 ---
 
-## Corpus
+## What it does
 
-Five foundational papers: *Attention Is All You Need*, *BERT*, *Sentence-BERT*,
-*RAG*, and *Lost in the Middle*.
+- **Ask questions over a fixed corpus** of foundational NLP/RAG papers via a CLI, or
+- **Upload your own PDFs** (a company policy, research papers, anything) through
+  the web app and chat with them — *"how many leaves am I granted per year?"* —
+  with every answer citing the exact source section.
 
-The PDFs themselves are **not committed** (see `data/raw/README.md` for the list
-and sources). The pre-chunked text ships in `data/processed/chunks.jsonl`, so the
-vector index — and CI — can be rebuilt without the original PDFs.
+Every answer is **grounded**: the model only uses retrieved chunks, cites them by
+number, and those numbers resolve to real `doc, §section, page` references. It
+cannot hallucinate a citation, and it refuses out-of-corpus questions rather than
+answering from its own training knowledge.
 
 ---
 
@@ -112,6 +118,50 @@ answering from the LLM's own training knowledge.
 
 ---
 
+## Web app (full-stack)
+
+Beyond the CLI, the system ships as a web app: upload your own PDFs and chat with
+them, with every answer grounded in citations.
+
+```
+React + Vite (5173)  ──HTTP──▶  FastAPI (8000)  ──▶  per-session RAG pipeline
+   upload / chat UI              /session /upload /chat     (Chroma + BM25 + rerank + Groq)
+```
+
+- **FastAPI backend** (`src/askmydocs/api.py`) wraps the pipeline in three
+  endpoints: create a session, upload a PDF (extract → chunk → embed into that
+  session's collection), and chat (hybrid retrieval → rerank → grounded
+  generation, scoped to the session).
+- **Per-session isolation:** each browser session gets its own Chroma collection
+  and BM25 index, so one user's uploaded documents are never retrievable by
+  another's queries. (Verified: a query in session A's collection never returns
+  session B's documents.)
+- **Runtime ingestion** (`src/askmydocs/upload.py`): uploaded PDFs are ingested
+  in-process — the same extract/chunk/embed pipeline as the CLI, scoped to a
+  collection. The PDF is written to a temp file, ingested, then deleted; only the
+  embedded chunks persist.
+- **React + Vite frontend** (`frontend/`): drag-and-drop upload, a chat panel,
+  citations rendered as footnotes under each answer, and clear/new-session controls.
+
+### Running the web app
+
+Two processes (two terminals):
+
+```bash
+# Terminal 1 — backend (from project root)
+uv run uvicorn askmydocs.api:app --reload --port 8000
+
+# Terminal 2 — frontend
+cd frontend
+npm install        # first time only
+npm run dev        # serves http://localhost:5173
+```
+
+Open http://localhost:5173, upload a PDF, and ask away. Interactive API docs are
+at http://localhost:8000/docs.
+
+---
+
 ## Eval-gated CI
 
 Retrieval metrics (Recall@5, MRR) run on every push via GitHub Actions
@@ -121,9 +171,6 @@ retrieval below threshold, **the build fails.**
 
 The gate tests retrieval only (no LLM call), so CI is deterministic, free, and
 fast (~3 min cold, faster with model caching).
-
-<!-- Replace the lines below with your screenshots:
-     drag an image into a GitHub issue comment, copy the generated URL, and use it here. -->
 
 **Gate passing:**
 
@@ -140,13 +187,15 @@ fast (~3 min cold, faster with model caching).
 - **Retrieval:** Chroma (vector), rank-bm25 (lexical), weighted RRF fusion
 - **Models (free / local):** BGE-small embeddings, BGE-reranker-base cross-encoder
 - **Generation:** Groq (Llama-3.3-70B) — free tier, swappable behind one interface
+- **Backend / API:** FastAPI + Uvicorn, per-session Chroma collections
+- **Frontend:** React + Vite, framer-motion
 - **Framework:** LangChain (text splitting; Chroma, HuggingFace, and Groq integrations)
 - **Tooling:** uv (deps + lockfile), Typer (CLI), Pydantic (schema/config), pytest, ruff, loguru
 - **PDF:** PyMuPDF4LLM (Markdown extraction, two-column reading order)
 
 ---
 
-## Usage
+## Usage (CLI)
 
 ```bash
 # 1. Install (reproducible via uv.lock)
@@ -173,6 +222,18 @@ uv run pytest                                      # all tests, including the CI
 
 ---
 
+## Corpus
+
+Five foundational papers ship as the default CLI corpus: *Attention Is All You
+Need*, *BERT*, *Sentence-BERT*, *RAG*, and *Lost in the Middle*.
+
+The PDFs themselves are **not committed** (see `data/raw/README.md` for the list
+and sources). The pre-chunked text ships in `data/processed/chunks.jsonl`, so the
+vector index — and CI — can be rebuilt without the original PDFs. The web app
+lets users supply their own PDFs at runtime instead.
+
+---
+
 ## Project layout
 
 ```
@@ -182,11 +243,17 @@ ask-my-docs/
 │   ├── config.py        # typed settings (pydantic-settings)
 │   ├── extract.py       # PDF -> cleaned, heading-tagged sections
 │   ├── chunk.py         # sections -> retrieval-sized chunks
-│   ├── embed.py         # chunks -> Chroma vector store + dense search
-│   ├── retrieval.py     # BM25 + dense, weighted RRF fusion
+│   ├── embed.py         # chunks -> Chroma vector store + dense search (collection-aware)
+│   ├── retrieval.py     # BM25 + dense, weighted RRF fusion (per-collection)
 │   ├── rerank.py        # cross-encoder reranking + full pipeline
 │   ├── generate.py      # grounded generation via Groq
+│   ├── upload.py        # runtime PDF ingestion into a session collection
+│   ├── api.py           # FastAPI backend (/session, /upload, /chat)
 │   └── cli.py           # Typer CLI (ingest / chunk / embed / query / ask)
+├── frontend/            # React + Vite web app
+│   └── src/
+│       ├── App.jsx      # upload + chat UI
+│       └── api.js       # backend client
 ├── eval/
 │   ├── golden.jsonl     # question -> relevant-section labels
 │   ├── metrics.py       # Recall@k, MRR
@@ -215,6 +282,7 @@ Recorded as ADRs in `docs/decisions/`. Highlights:
 - **PyMuPDF4LLM over pypdf** — correct two-column reading order on academic PDFs.
 - **Dense-dominant weighted hybrid + rerank** as the shipping default — see
   [ADR-0001](docs/decisions/0001-retrieval-config.md).
+- **Per-session collections** for the web app — document isolation without auth.
 
 ---
 
@@ -223,6 +291,7 @@ Recorded as ADRs in `docs/decisions/`. Highlights:
 - Grow the golden set to ~25–30 questions; re-validate fusion weights at scale.
 - Add an answer-quality eval layer (faithfulness, citation accuracy), gated separately.
 - Persist the BM25 index (currently rebuilt in-memory — fine at this corpus size).
+- Web app: session expiry + cleanup, a persistent session store, and authentication.
 - Optional second implementation fully from scratch (no framework) for comparison.
 
 ---
