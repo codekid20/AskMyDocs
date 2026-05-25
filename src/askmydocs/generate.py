@@ -51,8 +51,9 @@ def _llm() -> ChatGroq:
     )
 
 
-def answer_question(question: str, k: int | None = None) -> Answer:
-    chunks = pipeline_search(question, k=k or settings.top_k)
+def answer_question(question: str, k: int | None = None,
+                    collection: str = "papers") -> Answer:
+    chunks = pipeline_search(question, k=k or settings.top_k, collection=collection)
     if not chunks:
         return Answer(text="No relevant sources found.", cited=[], all_sources=[])
 

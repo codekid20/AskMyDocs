@@ -47,9 +47,10 @@ def rerank(query: str, chunks: list[Chunk], k: int | None = None) -> list[Chunk]
     return [c for c, _ in ranked[:k]]
 
 
-def pipeline_search(query: str, k: int | None = None) -> list[Chunk]:
+def pipeline_search(query: str, k: int | None = None,
+                    collection: str = "papers") -> list[Chunk]:
     """Full retrieval pipeline: hybrid (wide net) -> cross-encoder rerank -> top k."""
     k = k or settings.top_k
-    # Over-fetch a generous candidate pool for the reranker to sort.
-    candidates = hybrid_search(query, k=settings.retrieve_n_before_rerank)
+    candidates = hybrid_search(query, k=settings.retrieve_n_before_rerank,
+                               collection=collection)
     return rerank(query, candidates, k=k)
